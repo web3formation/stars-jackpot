@@ -1,0 +1,607 @@
+// services/chainlink.js
+const axios = require('axios');
+const crypto = require('crypto');
+
+/**
+ * Генерирует случайное число в заданном диапазоне
+ * В реальном приложении здесь будет интеграция с Chainlink VRF или другим сервисом
+ * для получения проверяемого случайного числа
+ * 
+ * @param {number} min - Минимальное значение
+ * @param {number} max - Максимальное значение
+ * @returns {Promise<number>} - Случайное число
+ */
+async function generateRandomTicket(min, max) {
+  try {
+    // В продакшн-версии здесь будет запрос к Chainlink VRF
+    // Для примера используем локальный генератор с элементами случайности из внешних источников
+    
+    // Получаем случайные данные с random.org или подобного сервиса
+    const response = await axios.get('https://www.random.org/integers/', {
+      params: {
+        num: 1,
+        min: 1,
+        max: 1000000,
+        col: 1,
+        base: 10,
+        format: 'plain',
+        rnd: 'new'
+      }
+    });
+    
+    const externalRandomNumber = parseInt(response.data.trim());
+    
+    // Для дополнительной случайности используем текущее время
+    const timestamp = Date.now();
+    
+    // Создаем хеш из внешнего случайного числа и времени
+    const hash = crypto.createHash('sha256')
+      .update(`${externalRandomNumber}-${timestamp}`)
+      .digest('hex');
+    
+    // Преобразуем первые 8 символов хеша в число
+    const hashNumber = parseInt(hash.slice(0, 8), 16);
+    
+    // Приводим к нужному диапазону
+    const range = max - min + 1;
+    const scaledRandom = (hashNumber % range) + min;
+    
+    // Создаем верификационный хеш для возможной проверки
+    const verificationHash = crypto.createHash('sha256')
+      .update(`${externalRandomNumber}-${timestamp}-${scaledRandom}`)
+      .digest('hex');
+    
+    // В реальном приложении здесь можно сохранить verificationHash
+    // для публичной проверки честности розыгрыша
+    
+    return scaledRandom;
+  } catch (error) {
+    console.error('Ошибка генерации случайного числа:', error);
+    
+    // Если не удалось получить случайное число из внешнего источника,
+    // используем локальный генератор (для отказоустойчивости)
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+}
+
+module.exports = {
+  generateRandomTicket
+};
+
+// services/telegram.js
+const { Telegram } = require('telegraf');
+
+// Получаем токен из переменных окружения
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const PAYMENT_TOKEN = process.env.TELEGRAM_PAYMENT_TOKEN;
+
+// Инициализируем клиент Telegram API
+const telegram = new Telegram(TELEGRAM_BOT_TOKEN);
+
+/**
+ * Проверяет, подписан ли пользователь на указанный канал
+ * 
+ * @param {string} userId - Telegram ID пользователя
+ * @param {string} channelUsername - Имя канала без @
+ * @returns {Promise<boolean>} - Результат проверки
+ */
+async function verifySubscription(userId, channelUsername) {
+  try {
+    // В реальном приложении здесь будет запрос к Telegram API
+    // Для примера возвращаем true с 90% вероятностью
+    // В продакшн-версии этот код нужно заменить на реальную интеграцию
+    
+    // Имитация запроса к API с небольшой задержкой
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return Math.random() < 0.9;
+  } catch (error) {
+    console.error(`Ошибка проверки подписки для пользователя ${userId} на канал ${channelUsername}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Проверяет, сделал ли пользователь репост
+ * 
+ * @param {string} userId - Telegram ID пользователя
+ * @returns {Promise<boolean>} - Результат проверки
+ */
+async function verifyShare(userId) {
+  try {
+    // В реальном приложении здесь будет запрос к Telegram API
+    // Для примера возвращаем true с 85% вероятностью
+    // В продакшн-версии этот код нужно заменить на реальную интеграцию
+    
+    // Имитация запроса к API с небольшой задержкой
+    await new Promise(resolve => setTimeout(resolve, 700));
+    
+    return Math.random() < 0.85;
+  } catch (error) {
+    console.error(`Ошибка проверки репоста для пользователя ${userId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Проверяет валидность платежа через Telegram
+ * 
+ * @param {string} paymentId - ID платежа из Telegram
+ * @returns {Promise<boolean>} - Результат проверки
+ */
+async function verifyTelegramPayment(paymentId) {
+  try {
+    // В реальном приложении здесь будет запрос к Telegram Payments API
+    // Для примера возвращаем true с 95% вероятностью
+    // В продакшн-версии этот код нужно заменить на реальную интеграцию
+    
+    // Имитация запроса к API с небольшой задержкой
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    return Math.random() < 0.95;
+  } catch (error) {
+    console.error(`Ошибка проверки платежа ${paymentId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Отправляет уведомление пользователю через Telegram
+ * 
+ * @param {string} userId - Telegram ID пользователя
+ * @param {string} message - Текст сообщения
+ * @returns {Promise<boolean>} - Результат отправки
+ */
+async function sendNotification(userId, message) {
+  try {
+    // В продакшн-версии используйте реальную отправку сообщений
+    await telegram.sendMessage(userId, message, { parse_mode: 'HTML' });
+    return true;
+  } catch (error) {
+    console.error(`Ошибка отправки уведомления пользователю ${userId}:`, error);
+    return false;
+  }
+}
+
+module.exports = {
+  verifySubscription,
+  verifyShare,
+  verifyTelegramPayment,
+  sendNotification
+};
+
+// services/scheduler.js
+const schedule = require('node-schedule');
+const { Round, Jackpot, User, Transaction } = require('../models');
+const { generateRandomTicket } = require('./chainlink');
+const { sendNotification } = require('./telegram');
+
+/**
+ * Инициализирует расписание для автоматических джекпотов и обработки раундов
+ */
+function initScheduler() {
+  // Проверка раундов каждые 10 минут
+  schedule.scheduleJob('*/10 * * * *', async () => {
+    try {
+      await checkTimeoutRounds();
+    } catch (error) {
+      console.error('Ошибка при проверке раундов:', error);
+    }
+  });
+  
+  // Проверка еженедельного джекпота каждый день в 00:05
+  schedule.scheduleJob('5 0 * * *', async () => {
+    try {
+      await checkWeeklyJackpot();
+    } catch (error) {
+      console.error('Ошибка при проверке еженедельного джекпота:', error);
+    }
+  });
+  
+  console.log('Планировщик заданий инициализирован');
+}
+
+/**
+ * Проверяет раунды, которые находятся в ожидании слишком долго
+ */
+async function checkTimeoutRounds() {
+  console.log('Проверка таймаутов раундов...');
+  
+  // Найти активные раунды, которые были созданы более 10 минут назад
+  // и имеют хотя бы 2 участника
+  const timeoutThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 минут назад
+  
+  const timeoutRounds = await Round.find({
+    status: 'active',
+    startTime: { $lt: timeoutThreshold },
+    'participants.1': { $exists: true } // Хотя бы 2 участника
+  });
+  
+  for (const round of timeoutRounds) {
+    console.log(`Обработка раунда #${round.roundNumber} по таймауту`);
+    
+    // Определить победителя раунда
+    await determineWinner(round);
+  }
+}
+
+/**
+ * Обрабатывает еженедельный джекпот
+ */
+async function checkWeeklyJackpot() {
+  console.log('Проверка еженедельного джекпота...');
+  
+  // Найти активные джекпоты с истекшей датой окончания
+  const endedJackpots = await Jackpot.find({
+    status: 'active',
+    endDate: { $lt: new Date() }
+  });
+  
+  for (const jackpot of endedJackpots) {
+    if (jackpot.participants.length > 0) {
+      await determineJackpotWinner(jackpot);
+    } else {
+      // Если нет участников, просто отметить как завершенный
+      jackpot.status = 'completed';
+      await jackpot.save();
+    }
+    
+    // Создать новый еженедельный джекпот
+    const newEndDate = new Date();
+    newEndDate.setDate(newEndDate.getDate() + 7); // Следующая неделя
+    
+    const newJackpot = new Jackpot({
+      startDate: new Date(),
+      endDate: newEndDate,
+      status: 'active'
+    });
+    
+    await newJackpot.save();
+    console.log(`Создан новый еженедельный джекпот до ${newEndDate}`);
+  }
+}
+
+/**
+ * Определяет победителя раунда
+ * 
+ * @param {Object} round - Объект раунда из базы данных
+ * @returns {Promise<boolean>} - Результат обработки
+ */
+async function determineWinner(round) {
+  try {
+    console.log(`Определение победителя для раунда #${round.roundNumber}`);
+    
+    // Получить случайный билет через Chainlink VRF
+    const winningTicket = await generateRandomTicket(1, round.totalTickets);
+    
+    // Найти победителя по выигрышному билету
+    let winnerId = null;
+    let winningParticipant = null;
+    
+    for (const participant of round.participants) {
+      if (winningTicket >= participant.ticketStart && winningTicket <= participant.ticketEnd) {
+        winnerId = participant.user;
+        winningParticipant = participant;
+        break;
+      }
+    }
+    
+    if (!winnerId) {
+      console.error(`Не удалось определить победителя для раунда #${round.roundNumber}`);
+      return false;
+    }
+    
+    // Рассчитать выигрыш (общий банк минус комиссия)
+    const fee = (round.totalPot * round.feePercent) / 100;
+    const prize = round.totalPot - fee;
+    
+    // Обновить данные раунда
+    round.status = 'completed';
+    round.endTime = new Date();
+    round.winner = {
+      user: winnerId,
+      ticket: winningTicket,
+      prize
+    };
+    round.winningTicket = winningTicket;
+    
+    // Обновить баланс победителя
+    const winner = await User.findById(winnerId);
+    winner.balance += prize;
+    winner.totalWon += prize;
+    
+    // Обработка реферальных отчислений
+    if (winner.referrer) {
+      const referrer = await User.findById(winner.referrer);
+      if (referrer) {
+        const referralBonus = (prize * 10) / 100; // 10% от выигрыша
+        referrer.balance += referralBonus;
+        referrer.referralEarnings += referralBonus;
+        
+        // Создать транзакцию для реферала
+        const referralTransaction = new Transaction({
+          user: referrer._id,
+          type: 'referral',
+          amount: referralBonus,
+          referral: winner._id,
+          round: round._id,
+          status: 'completed',
+          note: `Реферальный бонус от выигрыша пользователя ${winner.username || winner.telegramId}`
+        });
+        await referralTransaction.save();
+        
+        // Уведомить реферера
+        await sendNotification(
+          referrer.telegramId,
+          `🎉 Вы получили <b>${referralBonus}</b> Stars в качестве реферального бонуса от выигрыша вашего реферала!`
+        );
+        
+        await referrer.save();
+      }
+    }
+    
+    // Создать транзакцию выигрыша
+    const transaction = new Transaction({
+      user: winnerId,
+      type: 'win',
+      amount: prize,
+      round: round._id,
+      status: 'completed',
+      note: `Выигрыш ${prize} Stars в раунде #${round.roundNumber}`
+    });
+    
+    // Создать новый раунд
+    const newRound = new Round({
+      roundNumber: round.roundNumber + 1,
+      status: 'active',
+      maxParticipants: round.maxParticipants,
+      minBet: round.minBet,
+      feePercent: round.feePercent
+    });
+    
+    // Сохранить все изменения в базе данных
+    await Promise.all([
+      round.save(),
+      winner.save(),
+      transaction.save(),
+      newRound.save()
+    ]);
+    
+    // Уведомить победителя
+    await sendNotification(
+      winner.telegramId,
+      `🎉 Поздравляем! Вы выиграли <b>${prize}</b> Stars в раунде #${round.roundNumber}!`
+    );
+    
+    // Уведомить других участников
+    for (const participant of round.participants) {
+      if (participant.user.toString() !== winnerId.toString()) {
+        const user = await User.findById(participant.user);
+        if (user) {
+          await sendNotification(
+            user.telegramId,
+            `ℹ️ Раунд #${round.roundNumber} завершен. Победителем стал ${winner.isAnonymous ? 'Анонимный игрок' : (winner.username || 'Игрок')} с выигрышем ${prize} Stars.`
+          );
+        }
+      }
+    }
+    
+    console.log(`Раунд #${round.roundNumber} успешно завершен. Победитель: ${winner.telegramId}, выигрыш: ${prize} Stars`);
+    return true;
+    
+  } catch (error) {
+    console.error(`Ошибка при определении победителя для раунда #${round.roundNumber}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Определяет победителя еженедельного джекпота
+ * 
+ * @param {Object} jackpot - Объект джекпота из базы данных
+ * @returns {Promise<boolean>} - Результат обработки
+ */
+async function determineJackpotWinner(jackpot) {
+  try {
+    console.log(`Определение победителя для еженедельного джекпота #${jackpot._id}`);
+    
+    // Вычислить общее количество билетов
+    const totalTickets = jackpot.participants.reduce((sum, p) => sum + p.tickets, 0);
+    
+    if (totalTickets === 0) {
+      console.log('Нет участников в джекпоте. Пропускаем розыгрыш.');
+      jackpot.status = 'completed';
+      await jackpot.save();
+      return false;
+    }
+    
+    // Получить случайный билет
+    const winningTicket = await generateRandomTicket(1, totalTickets);
+    
+    // Найти победителя
+    let currentTicket = 0;
+    let winner = null;
+    
+    for (const participant of jackpot.participants) {
+      currentTicket += participant.tickets;
+      if (winningTicket <= currentTicket) {
+        winner = participant;
+        break;
+      }
+    }
+    
+    if (!winner) {
+      console.error(`Не удалось определить победителя для джекпота #${jackpot._id}`);
+      return false;
+    }
+    
+    // Обновить данные джекпота
+    jackpot.status = 'completed';
+    jackpot.winner = {
+      user: winner.user,
+      ticket: winningTicket,
+      prize: jackpot.totalPot
+    };
+    jackpot.winningTicket = winningTicket;
+    await jackpot.save();
+    
+    // Обновить баланс победителя
+    const winnerUser = await User.findById(winner.user);
+    winnerUser.balance += jackpot.totalPot;
+    winnerUser.totalWon += jackpot.totalPot;
+    
+    // Создать транзакцию
+    const transaction = new Transaction({
+      user: winner.user,
+      type: 'win',
+      amount: jackpot.totalPot,
+      jackpot: jackpot._id,
+      status: 'completed',
+      note: `Выигрыш ${jackpot.totalPot} Stars в еженедельном джекпоте`
+    });
+    
+    await Promise.all([
+      winnerUser.save(),
+      transaction.save()
+    ]);
+    
+    // Уведомить победителя
+    await sendNotification(
+      winnerUser.telegramId,
+      `🎉 Поздравляем! Вы выиграли <b>${jackpot.totalPot}</b> Stars в еженедельном джекпоте!`
+    );
+    
+    console.log(`Джекпот #${jackpot._id} успешно разыгран. Победитель: ${winnerUser.telegramId}, выигрыш: ${jackpot.totalPot} Stars`);
+    return true;
+    
+  } catch (error) {
+    console.error(`Ошибка при определении победителя для джекпота #${jackpot._id}:`, error);
+    return false;
+  }
+}
+
+module.exports = {
+  initScheduler,
+  checkTimeoutRounds,
+  checkWeeklyJackpot,
+  determineWinner,
+  determineJackpotWinner
+};
+
+// services/notifications.js
+const { User } = require('../models');
+const { sendNotification } = require('./telegram');
+
+/**
+ * Отправляет массовое уведомление всем пользователям
+ * 
+ * @param {string} message - Текст сообщения
+ * @param {Object} options - Дополнительные опции
+ * @returns {Promise<Object>} - Статистика отправки
+ */
+async function sendMassNotification(message, options = {}) {
+  const { filter = {}, dryRun = false } = options;
+  
+  try {
+    // Найти пользователей, соответствующих фильтру
+    const users = await User.find(filter).select('telegramId');
+    
+    console.log(`Отправка массового уведомления ${users.length} пользователям`);
+    
+    if (dryRun) {
+      return {
+        success: true,
+        usersCount: users.length,
+        message: 'Тестовый режим, сообщения не отправлены'
+      };
+    }
+    
+    let successCount = 0;
+    let failureCount = 0;
+    
+    // Отправить уведомления в пакетном режиме с задержкой, чтобы избежать ограничений Telegram
+    for (let i = 0; i < users.length; i++) {
+      try {
+        const sent = await sendNotification(users[i].telegramId, message);
+        
+        if (sent) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+        
+        // Добавить небольшую задержку между сообщениями
+        if (i % 20 === 0 && i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`Ошибка отправки уведомления пользователю ${users[i].telegramId}:`, error);
+        failureCount++;
+      }
+    }
+    
+    return {
+      success: true,
+      totalUsers: users.length,
+      successCount,
+      failureCount
+    };
+    
+  } catch (error) {
+    console.error('Ошибка отправки массового уведомления:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Отправляет уведомление о новом раунде активным пользователям
+ * 
+ * @param {Object} round - Объект раунда из базы данных
+ * @returns {Promise<boolean>} - Результат отправки
+ */
+async function notifyAboutNewRound(round) {
+  try {
+    // Найти пользователей, которые были активны в последние 24 часа
+    const lastActiveThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const activeUsers = await User.find({
+      lastActive: { $gte: lastActiveThreshold }
+    }).select('telegramId');
+    
+    const message = `🎮 Новый раунд #${round.roundNumber} начался! Минимальная ставка: ${round.minBet} Stars.`;
+    
+    for (let i = 0; i < activeUsers.length; i++) {
+      try {
+        await sendNotification(activeUsers[i].telegramId, message);
+        
+        // Добавить задержку между отправками
+        if (i % 20 === 0 && i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`Ошибка отправки уведомления о новом раунде пользователю ${activeUsers[i].telegramId}:`, error);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Ошибка отправки уведомлений о новом раунде:', error);
+    return false;
+  }
+}
+
+module.exports = {
+  sendMassNotification,
+  notifyAboutNewRound
+};
+
+// services/index.js
+module.exports = {
+  chainlink: require('./chainlink'),
+  telegram: require('./telegram'),
+  scheduler: require('./scheduler'),
+  notifications: require('./notifications')
+};
